@@ -1,13 +1,14 @@
 import cv2 as cv
-from mtcnn import MTCNN
 import mediapipe as mp
 import numpy as np
 from tkinter import *
 from tkinter.ttk import *
+import tensorflow
 
 capture = cv.VideoCapture(0) #to open Camera
-#detectionType=3
+
 numOfDetectedFaces=0
+
 size = 45
 def faceDetection(detectionType):
     text="Algorithm: "
@@ -21,6 +22,8 @@ def faceDetection(detectionType):
 
 def ViolaJonesDetection(algorithm):
     pretrained_model = cv.CascadeClassifier("face_detector.xml") 
+    numOfDetection=60
+    textForFile="Human face is detected with Viola Jones Detection on positions: "
     while True:
         boolean, frame = capture.read()
         cv.putText(frame,algorithm,(15,25),cv.FONT_HERSHEY_SIMPLEX,0.4,(255,0,0),2,cv.LINE_AA)
@@ -31,34 +34,23 @@ def ViolaJonesDetection(algorithm):
             cv.putText(frame,"Number of detected faces: " + str(numOfDetectedFaces),(15,40),cv.FONT_HERSHEY_SIMPLEX,0.4,(0,0,255),2,cv.LINE_AA)
             for (x,y,w,h) in coordinate_list:
                 cv.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
+                coordinates="x:"+str(x)+" y:"+str(y)
+                if numOfDetection==60:
+                    with open('coordinates.txt','w') as f:
+                        f.write(textForFile)
+                        numOfDetectedFaces=0
+                else:
+                    numOfDetection+=1
             displayVideoFrame(frame)
             if cv.waitKey(5) & 0xFF == 27:
                 break  
     capture.release()
     cv.destroyAllWindows()
 
-'''def MTCNNDetection(algorythm):
-    detector = MTCNN()
-    while (True):
-        ret, frame = capture.read()
-        cv.putText(frame,algorythm,(15,25),cv.FONT_HERSHEY_SIMPLEX,0.4,(255,0,0),2,cv.LINE_AA)
-        frame = cv.resize(frame, (600, 400))
-        boxes = detector.detect_faces(frame)
-        if boxes:
-            box = boxes[0]['box']
-            conf = boxes[0]['confidence']
-            x, y, w, h = box[0], box[1], box[2], box[3]
-            if conf > 0.5:
-                cv.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 255), 1)
-            displayVideoFrame(frame)
-            if cv.waitKey(25) & 0xFF == ord('q'):
-                break
-    capture.release()
-    cv.destroyAllWindows()
-
-'''
 
 def FaceMashDetection(algorithm):
+    numOfDetection=60
+    textForFile="Human face is detected with Face Mash Detection on positions: "
     # Face mesh detection
     mp_drawing = mp.solutions.drawing_utils
     mp_face_mesh = mp.solutions.face_mesh
@@ -85,6 +77,15 @@ def FaceMashDetection(algorithm):
                     connections=mp_face_mesh.FACEMESH_TESSELATION,
                     landmark_drawing_spec=drawing_spec,
                     connection_drawing_spec=drawing_spec)
+                    (height, width, channel) = image.shape
+                    coordinates="x:"+str((results.multi_face_landmarks[0].landmark[4].x*width))+" y:"+str(results.multi_face_landmarks[0].landmark[4].y*height)
+                    if numOfDetection==60:
+                        with open('coordinates.txt','w') as f:
+                            f.write(textForFile+coordinates)
+                            numOfDetectedFaces=0
+                    else:
+                        numOfDetection+=1
+
             else:
                 cv.putText(image,"Number of detected faces: " + str(0),(15,40),cv.FONT_HERSHEY_SIMPLEX,0.4,(0,0,255),2,cv.LINE_AA)           
             displayVideoFrame(image)
@@ -112,18 +113,20 @@ def click_event(event, x, y, flags, params):
     if event == cv.EVENT_LBUTTONDOWN:
         boolean, frame = capture.read()
         (height, width, channel) = frame.shape
-        if x >= width-size*2-10 & x <= width-10 & y >= 10 & y <= 10 + size:
+       # print("Width:"+str(width)+"Height:"+str(height)+"Size:"+str(size))
+        if (x >= (width-size*2-10) & x <= (width-10) ) :
+           
+          # print("Tu ste: x="+str(x)+" y="+ str(y) )
            master = Tk()
            master.geometry("200x200")
            master.title("Select an algorithm")
            label = Label(master,text="Select an algorithm")
            label.pack(pady=10)
-           btn1 = Button(master,text="ViolaJonesDetection",command= lambda:faceDetection(1)).pack()
-           btn2 = Button(master,text="FaceMashDetection",command= lambda:faceDetection(3)).pack()
+           btn1 = Button(master,text="ViolaJonesDetection",command= lambda:[master.destroy(),faceDetection(1)]).pack()
+           btn2 = Button(master,text="FaceMashDetection",command= lambda:[ master.destroy(),faceDetection(3)]).pack()
            btn3 = Button(master,text="Quit",command= master.destroy).pack()
-
            mainloop()
-           
-
+       
+        
 faceDetection(3)
 
